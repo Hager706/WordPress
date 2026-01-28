@@ -61,8 +61,6 @@ jobs:
               "mkdir -p /tmp/wordpress-deploy",
               "tar -xzf /tmp/app_$DATE.tar.gz -C /tmp/wordpress-deploy",
               "sudo rsync -av --delete --exclude=wp-content/uploads /tmp/wordpress-deploy/ /var/www/html/",
-              "sudo chown -R nginx:nginx /var/www/html/",
-              "sudo chmod -R 755 /var/www/html/",
               "rm -rf /tmp/wordpress-deploy /tmp/app_$DATE.tar.gz",
               "sudo systemctl restart php-fpm nginx"
             ]' \
