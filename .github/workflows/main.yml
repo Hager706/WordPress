@@ -17,7 +17,7 @@ jobs:
     - name: Create tar archive
       run: |
         DATE=$(date +%Y-%m-%d)
-        tar -czf app_$DATE.tar.gz .
+        tar -czf app_$DATE.tar.gz --exclude='.git' --exclude='.github' .
 
     - name: Configure AWS
       uses: aws-actions/configure-aws-credentials@v2
