@@ -15,16 +15,13 @@ jobs:
     - name: Create tar archive
       run: |
         DATE=$(date +%Y-%m-%d)
-        # Create archive in parent directory to avoid including it
-        cd ..
+        # Archive only the WordPress files (not the directory)
         tar -czf app_$DATE.tar.gz \
-          --exclude='WordPress/.git' \
-          --exclude='WordPress/.github' \
-          --exclude='WordPress/node_modules' \
-          WordPress/
-        # Move it back to the workspace
-        mv app_$DATE.tar.gz WordPress/
-        cd WordPress
+          --exclude='.git' \
+          --exclude='.github' \
+          --exclude='node_modules' \
+          --exclude='*.tar.gz' \
+          *
           
     - name: Configure AWS
       uses: aws-actions/configure-aws-credentials@v2
@@ -53,7 +50,7 @@ jobs:
         
         for ID in $INSTANCE_IDS; do
           echo "Deploying to instance: $ID"
-          COMMAND_ID=$(aws ssm send-command \
+          aws ssm send-command \
             --instance-ids "$ID" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy WordPress" \
@@ -63,12 +60,13 @@ jobs:
               "aws s3 cp s3://hager-app/app_$DATE.tar.gz /tmp/",
               "mkdir -p /tmp/wordpress-deploy",
               "tar -xzf /tmp/app_$DATE.tar.gz -C /tmp/wordpress-deploy",
-              "sudo rsync -av --delete /tmp/wordpress-deploy/ /var/www/html/",
-              "sudo chown -R www-data:www-data /var/www/html/",
-              "rm -rf /tmp/wordpress-deploy /tmp/app_$DATE.tar.gz"
+              "sudo rsync -av --delete --exclude=wp-content/uploads /tmp/wordpress-deploy/ /var/www/html/",
+              "sudo chown -R nginx:nginx /var/www/html/",
+              "sudo chmod -R 755 /var/www/html/",
+              "rm -rf /tmp/wordpress-deploy /tmp/app_$DATE.tar.gz",
+              "sudo systemctl restart php-fpm nginx"
             ]' \
             --output text \
-            --query 'Command.CommandId')
-          
-          echo "Command sent: $COMMAND_ID"
+            --query 'Command.CommandId'
+          echo "Deployment command sent to $ID"
         done
