@@ -1,5 +1,4 @@
 name: Deploy WordPress
-
 on:
   push:
     branches: master
@@ -9,51 +8,67 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
-
+      
     - name: Create tar archive
       run: |
-       DATE=$(date +%Y-%m-%d)
-        # Exclude the tar file itself and common directories
+        DATE=$(date +%Y-%m-%d)
+        # Create archive in parent directory to avoid including it
+        cd ..
         tar -czf app_$DATE.tar.gz \
-          --exclude='app_*.tar.gz' \
-          --exclude='.git' \
-          --exclude='.github' \
-          --exclude='node_modules' \
-          .
-
+          --exclude='WordPress/.git' \
+          --exclude='WordPress/.github' \
+          --exclude='WordPress/node_modules' \
+          WordPress/
+        # Move it back to the workspace
+        mv app_$DATE.tar.gz WordPress/
+        cd WordPress
+          
     - name: Configure AWS
       uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
-
+        
     - name: Upload build to S3
       run: |
         DATE=$(date +%Y-%m-%d)
         aws s3 cp app_$DATE.tar.gz s3://hager-app/
-
+        
     - name: Deploy to Auto Scaling instances via SSM
       run: |
         DATE=$(date +%Y-%m-%d)
-
         INSTANCE_IDS=$(aws ec2 describe-instances \
           --filters "Name=tag:aws:autoscaling:groupName,Values=WordPress-autoscail" \
-          --query "Reservations[].Instances[].InstanceId" \
+          --query "Reservations[].Instances[?State.Name=='running'].InstanceId" \
           --output text)
-
+        
+        if [ -z "$INSTANCE_IDS" ]; then
+          echo "No running instances found"
+          exit 1
+        fi
+        
         for ID in $INSTANCE_IDS; do
-          aws ssm send-command \
-            --instance-ids $ID \
+          echo "Deploying to instance: $ID"
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$ID" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy WordPress" \
-            --parameters commands="
-              aws s3 cp s3://hager-app/app_$DATE.tar.gz /tmp/ &&
-              tar -xzf /tmp/app_$DATE.tar.gz -C /tmp &&
-              rsync -av --delete /tmp/ /var/www/html/
-            "
+            --parameters 'commands=[
+              "set -e",
+              "DATE='"$DATE"'",
+              "aws s3 cp s3://hager-app/app_$DATE.tar.gz /tmp/",
+              "mkdir -p /tmp/wordpress-deploy",
+              "tar -xzf /tmp/app_$DATE.tar.gz -C /tmp/wordpress-deploy",
+              "sudo rsync -av --delete /tmp/wordpress-deploy/ /var/www/html/",
+              "sudo chown -R www-data:www-data /var/www/html/",
+              "rm -rf /tmp/wordpress-deploy /tmp/app_$DATE.tar.gz"
+            ]' \
+            --output text \
+            --query 'Command.CommandId')
+          
+          echo "Command sent: $COMMAND_ID"
         done
