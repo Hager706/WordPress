@@ -33,7 +33,8 @@ jobs:
     - name: Upload build to S3
       run: |
         DATE=$(date +%Y-%m-%d)
-        aws s3 cp app_$DATE.tar.gz s3://hager-app/
+        aws s3 cp app_$DATE.tar.gz s3://hager-app/app_$DATE.tar.gz
+        aws s3 cp app_$DATE.tar.gz s3://hager-app/latest.tar.gz
         
     - name: Deploy to Auto Scaling instances via SSM
       run: |
@@ -42,11 +43,7 @@ jobs:
           --filters "Name=tag:aws:autoscaling:groupName,Values=WordPress-autoscail" \
           --query "Reservations[].Instances[?State.Name=='running'].InstanceId" \
           --output text)
-        
-        if [ -z "$INSTANCE_IDS" ]; then
-          echo "No running instances found"
-          exit 1
-        fi
+
         
         for ID in $INSTANCE_IDS; do
           echo "Deploying to instance: $ID"
