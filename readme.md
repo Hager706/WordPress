@@ -10,13 +10,6 @@ This project demonstrates a highly available, scalable, and containerized WordPr
 - Amazon EC2 Auto Scaling Group
 - Custom AMI for automated deployment
 
-**Key Features:**
-- Traffic load-balanced across multiple WordPress containers
-- Zero data loss during container replacement
-- Auto-healing EC2 instances
-- Session persistence for WordPress authentication
-- Shared storage for media uploads
-
 ---
 
 ## Architecture
@@ -47,7 +40,6 @@ This project demonstrates a highly available, scalable, and containerized WordPr
 
 ## Prerequisites
 
-- AWS Account
 - VPC with public and private subnets
 - Security Groups configured:
   - Application SG: Allow 80, 8080, 8089, 22
@@ -62,7 +54,7 @@ This project demonstrates a highly available, scalable, and containerized WordPr
 
 #### 1.1 Launch EC2 Instance
 - AMI: Amazon Linux 2023
-- Instance Type: t3.micro (or larger)
+- Instance Type: t2.micro 
 - Security Group: Database SG (port 3306 open to Application SG)
 
 #### 1.2 Install Docker
@@ -348,7 +340,7 @@ df -h | grep efs
 
 #### 7.3 Database Connection Test
 ```bash
-docker exec wordpress1 php -r "echo mysqli_connect('<DB_PRIVATE_IP>', 'wp_user', 'wp_password', 'wordpress') ? 'Connected' : 'Failed';"
+docker exec wordpress1 php -r "echo mysqli_connect('10.0.139.231', 'hager', '123', 'wordpress') ? 'Connected to DB' : 'DB Connection Failed';"
 ```
 
 #### 7.4 Health Check Test
