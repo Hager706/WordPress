@@ -1,0 +1,49 @@
+name: Build & Deploy WordPress 
+
+on:
+  push:
+    branches: master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      ECR_REPOSITORY: wordpress
+      
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push Image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          VERSION_TAG: build-${{ github.run_number }}
+        run: |
+         IMAGE_URI=$REGISTRY/$ECR_REPOSITORY
+         docker build -t $IMAGE_URI:$IMAGE_TAG .
+         docker push $IMAGE_URI:$IMAGE_TAG
+
+         docker tag $IMAGE_URI:$IMAGE_TAG $IMAGE_URI:latest
+         docker push $IMAGE_URI:latest
+
+      - name: Refresh Auto Scaling Group
+        run: |
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name WordPress-autoscail \
+            --preferences '{
+              "MinHealthyPercentage": 50,
+              "InstanceWarmup": 120
+            }'
