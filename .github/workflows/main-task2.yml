@@ -30,7 +30,7 @@ jobs:
       - name: Build & Push Image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          VERSION_TAG: build-${{ github.run_number }}
+          IMAGE_TAG: build-${{ github.run_number }}
         run: |
          IMAGE_URI=$REGISTRY/$ECR_REPOSITORY
          docker build -t $IMAGE_URI:$IMAGE_TAG .
