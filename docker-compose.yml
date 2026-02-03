@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  wordpress1:
+    image: 661303382830.dkr.ecr.us-east-1.amazonaws.com/wordpress:latest
+    container_name: wordpress1
+    ports:
+      - "8080:80"
+    environment:
+      DB_HOST: 10.0.139.231
+      DB_NAME: wordpress
+      DB_USER: hager
+      DB_PASSWORD: 123
+    volumes:
+      - /mnt/efs:/var/www/html/wp-content/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+
+  wordpress2:
+    image: 661303382830.dkr.ecr.us-east-1.amazonaws.com/wordpress:latest
+    container_name: wordpress2
+    ports:
+      - "8089:80"
+    environment:
+      DB_HOST: 10.0.139.231
+      DB_NAME: wordpress
+      DB_USER: hager
+      DB_PASSWORD: 123
+    volumes:
+      - /mnt/efs:/var/www/html/wp-content/uploads
+    depends_on:
+      wordpress1:
+        condition: service_healthy
+    restart: always
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - wordpress1
+      - wordpress2
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: always
