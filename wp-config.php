@@ -92,7 +92,8 @@ define( 'WP_DEBUG', false );
 
 
 /* That's all, stop editing! Happy publishing. */
-
+define('WP_HOME', 'http://hager-wordpress.cloud-stacks.com');
+define('WP_SITEURL', 'http://hager-wordpress.cloud-stacks.com');
 /** Absolute path to the WordPress directory. */
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/' );
