@@ -39,11 +39,11 @@ jobs:
          docker tag $IMAGE_URI:$IMAGE_TAG $IMAGE_URI:latest
          docker push $IMAGE_URI:latest
 
-      - name: Refresh Auto Scaling Group
-        run: |
-          aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name WordPress-autoscail \
-            --preferences '{
-              "MinHealthyPercentage": 50,
-              "InstanceWarmup": 120
-            }'
+      # - name: Refresh Auto Scaling Group
+      #   run: |
+      #     aws autoscaling start-instance-refresh \
+      #       --auto-scaling-group-name WordPress-autoscail \
+      #       --preferences '{
+      #         "MinHealthyPercentage": 50,
+      #         "InstanceWarmup": 120
+      #       }'
